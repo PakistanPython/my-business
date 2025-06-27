@@ -149,6 +149,31 @@ export interface CharityOverview {
   total_remaining: number;
 }
 
+export interface AnalyticsData {
+  period: string;
+  year: number;
+  income_analytics: AnalyticsRecord[];
+  expense_analytics: AnalyticsRecord[];
+  profit_analysis: ProfitAnalysisRecord[];
+}
+
+export interface AnalyticsRecord {
+  period: string;
+  total_amount: number;
+  transaction_count: number;
+  average_amount: number;
+  category: string;
+  charity_generated?: number;
+}
+
+export interface ProfitAnalysisRecord {
+  period: string;
+  income: number;
+  expenses: number;
+  profit: number;
+  profit_margin: number;
+}
+
 export interface DashboardData {
   summary: DashboardSummary;
   monthly_data: MonthlyData[];

@@ -171,7 +171,8 @@ router.get('/summary', async (req, res) => {
 // Get detailed analytics
 router.get('/analytics', [
   query('period').optional().isIn(['week', 'month', 'quarter', 'year']).withMessage('Invalid period'),
-  query('year').optional().isInt({ min: 2000, max: 2100 }).withMessage('Invalid year')
+  query('year').optional().isInt({ min: 2000, max: 2100 }).withMessage('Invalid year'),
+  query('time_range').optional().isIn(['3months', '6months', '12months', '24months']).withMessage('Invalid time range')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -186,31 +187,45 @@ router.get('/analytics', [
     const userId = req.user!.userId;
     const period = req.query.period as string || 'month';
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
+    const timeRange = req.query.time_range as string;
 
     let dateFilter = '';
     let groupBy = '';
     let dateFormat = '';
 
-    switch (period) {
-      case 'week':
-        dateFilter = `AND YEAR(date) = ${year} AND WEEK(date) >= WEEK(CURDATE()) - 12`;
-        groupBy = 'YEAR(date), WEEK(date)';
-        dateFormat = 'CONCAT(YEAR(date), "-W", LPAD(WEEK(date), 2, "0"))';
-        break;
-      case 'quarter':
-        dateFilter = `AND YEAR(date) = ${year}`;
-        groupBy = 'YEAR(date), QUARTER(date)';
-        dateFormat = 'CONCAT(YEAR(date), "-Q", QUARTER(date))';
-        break;
-      case 'year':
-        dateFilter = `AND YEAR(date) >= ${year - 4}`;
-        groupBy = 'YEAR(date)';
-        dateFormat = 'YEAR(date)';
-        break;
-      default: // month
-        dateFilter = `AND YEAR(date) = ${year}`;
-        groupBy = 'YEAR(date), MONTH(date)';
-        dateFormat = 'DATE_FORMAT(date, "%Y-%m")';
+    if (timeRange) {
+      let intervalMonths = 0;
+      switch (timeRange) {
+        case '3months': intervalMonths = 3; break;
+        case '6months': intervalMonths = 6; break;
+        case '12months': intervalMonths = 12; break;
+        case '24months': intervalMonths = 24; break;
+      }
+      dateFilter = `AND date >= DATE_SUB(CURDATE(), INTERVAL ${intervalMonths} MONTH)`;
+      groupBy = 'YEAR(date), MONTH(date)';
+      dateFormat = 'DATE_FORMAT(date, "%Y-%m")';
+    } else {
+      switch (period) {
+        case 'week':
+          dateFilter = `AND YEAR(date) = ${year} AND WEEK(date) >= WEEK(CURDATE()) - 12`;
+          groupBy = 'YEAR(date), WEEK(date)';
+          dateFormat = 'CONCAT(YEAR(date), "-W", LPAD(WEEK(date), 2, "0"))';
+          break;
+        case 'quarter':
+          dateFilter = `AND YEAR(date) = ${year}`;
+          groupBy = 'YEAR(date), QUARTER(date)';
+          dateFormat = 'CONCAT(YEAR(date), "-Q", QUARTER(date))';
+          break;
+        case 'year':
+          dateFilter = `AND YEAR(date) >= ${year - 4}`;
+          groupBy = 'YEAR(date)';
+          dateFormat = 'YEAR(date)';
+          break;
+        default: // month
+          dateFilter = `AND date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)`;
+          groupBy = 'YEAR(date), MONTH(date)';
+          dateFormat = 'DATE_FORMAT(date, "%Y-%m")';
+      }
     }
 
     // Get income analytics

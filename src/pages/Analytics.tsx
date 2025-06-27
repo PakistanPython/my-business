@@ -17,7 +17,7 @@ import {
   LineChart
 } from 'lucide-react';
 import { dashboardApi } from '../lib/api';
-import { DashboardData } from '../lib/types';
+import { AnalyticsData, DashboardSummary, MonthlyData, TrendData, CategoryStats, CharityOverview } from '../lib/types';
 import toast from 'react-hot-toast';
 
 // A helper function to safely format numbers to strings
@@ -30,21 +30,27 @@ const formatToFixed = (value: string | number | undefined | null, digits: number
 };
 
 export const AnalyticsPage: React.FC = () => {
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary | null>(null);
+  const [monthlyData, setMonthlyData] = useState<MonthlyData[] | null>(null);
+  const [trendData, setTrendData] = useState<TrendData[] | null>(null);
+  const [topExpenseCategories, setTopExpenseCategories] = useState<CategoryStats[] | null>(null);
+  const [charityOverview, setCharityOverview] = useState<CharityOverview[] | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('6months');
 
   useEffect(() => {
     loadAnalyticsData();
+    loadDashboardSummary(); // Load summary data separately
   }, [timeRange]);
 
   const loadAnalyticsData = async () => {
     try {
       setIsLoading(true);
-      // It's good practice to reset data on new load to prevent showing stale data
-      setDashboardData(null); 
+      setAnalyticsData(null); 
       const response = await dashboardApi.getAnalytics({ time_range: timeRange });
-      setDashboardData(response.data.data);
+      setAnalyticsData(response.data.data);
     } catch (error) {
       console.error('Error loading analytics:', error);
       toast.error('Failed to load analytics data');
@@ -53,15 +59,30 @@ export const AnalyticsPage: React.FC = () => {
     }
   };
 
+  const loadDashboardSummary = async () => {
+    try {
+      const response = await dashboardApi.getSummary();
+      setDashboardSummary(response.data.data.summary);
+      setMonthlyData(response.data.data.monthly_data);
+      setTrendData(response.data.data.trend_data);
+      setTopExpenseCategories(response.data.data.top_expense_categories);
+      setCharityOverview(response.data.data.charity_overview);
+    } catch (error) {
+      console.error('Error loading dashboard summary:', error);
+      toast.error('Failed to load dashboard summary data');
+    }
+  };
+
   const exportData = () => {
-    if (!dashboardData) return;
+    if (!analyticsData || !dashboardSummary || !monthlyData || !trendData || !topExpenseCategories || !charityOverview) return;
     
     const data = {
-      summary: dashboardData.summary,
-      monthly_data: dashboardData.monthly_data,
-      trend_data: dashboardData.trend_data,
-      expense_categories: dashboardData.top_expense_categories,
-      charity_overview: dashboardData.charity_overview,
+      analytics: analyticsData,
+      summary: dashboardSummary,
+      monthly_data: monthlyData,
+      trend_data: trendData,
+      expense_categories: topExpenseCategories,
+      charity_overview: charityOverview,
       exported_at: new Date().toISOString()
     };
     
@@ -85,8 +106,8 @@ export const AnalyticsPage: React.FC = () => {
 
     const numericData = data.map(d => ({
         ...d,
-        value: Number(d.value || d.monthly_income || d.income || d.total_amount || 0),
-        label: d.label || d.month_name || d.month || d.category || d.name || `Item`
+        value: Number(d.total_amount || d.income || d.monthly_income || 0),
+        label: d.period || d.category || d.month_name || `Item`
     }));
 
     const maxValue = Math.max(...numericData.map(d => d.value));
@@ -135,8 +156,7 @@ export const AnalyticsPage: React.FC = () => {
     </Card>
   );
 
-  // --- THE FIX: Make the loading and data check more robust ---
-  if (isLoading) {
+  if (isLoading || !dashboardSummary || !monthlyData || !trendData || !topExpenseCategories || !charityOverview || !analyticsData) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -144,20 +164,8 @@ export const AnalyticsPage: React.FC = () => {
     );
   }
 
-  // This check now ensures all essential data is present before rendering
-  if (!dashboardData || !dashboardData.summary || !dashboardData.monthly_data) {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-xl font-semibold">No Data Available</h2>
-        <p className="text-gray-500 mt-2">Could not load the required analytics data. Please try again later.</p>
-      </div>
-    );
-  }
+  const summary = dashboardSummary;
 
-  // It's now safe to destructure
-  const { summary, monthly_data, trend_data, top_expense_categories, charity_overview } = dashboardData;
-
-  // It's also safe to perform calculations
   const savingsRate = Number(summary.total_income) > 0 
     ? ((Number(summary.total_income) - Number(summary.total_expenses)) / Number(summary.total_income)) * 100 
     : 0;
@@ -200,14 +208,14 @@ export const AnalyticsPage: React.FC = () => {
         />
         <MetricCard
           title="Monthly Income"
-          value={Number(monthly_data[monthly_data.length - 1]?.monthly_income) || 0}
+          value={Number(monthlyData[monthlyData.length - 1]?.monthly_income) || 0}
           icon={<DollarSign className="h-4 w-4 text-blue-600" />}
           color="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200"
           subtitle="Current month"
         />
         <MetricCard
           title="Monthly Expenses"
-          value={Number(monthly_data[monthly_data.length - 1]?.monthly_expenses) || 0}
+          value={Number(monthlyData[monthlyData.length - 1]?.monthly_expenses) || 0}
           icon={<CreditCard className="h-4 w-4 text-red-600" />}
           color="bg-gradient-to-br from-red-50 to-red-100 border-red-200"
           subtitle="Current month"
@@ -257,8 +265,60 @@ export const AnalyticsPage: React.FC = () => {
         </Card>
       </div>
       
-      {/* Charts Section and other components remain the same... */}
-      {/* ... */}
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><LineChart className="w-5 h-5 mr-2" />Income vs Expenses Trend</CardTitle>
+            <CardDescription>Last {timeRange === '3months' ? '3' : timeRange === '6months' ? '6' : timeRange === '12months' ? '12' : '24'} Months</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SimpleChart data={trendData} title="Income vs Expenses" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><PieChart className="w-5 h-5 mr-2" />Top Expense Categories</CardTitle>
+            <CardDescription>Breakdown of spending by category</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SimpleChart data={topExpenseCategories} title="Expense Categories" />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><BarChart3 className="w-5 h-5 mr-2" />Monthly Income</CardTitle>
+            <CardDescription>Income over the last {timeRange === '3months' ? '3' : timeRange === '6months' ? '6' : timeRange === '12months' ? '12' : '24'} months</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SimpleChart data={analyticsData.income_analytics} title="Monthly Income" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><BarChart3 className="w-5 h-5 mr-2" />Monthly Expenses</CardTitle>
+            <CardDescription>Expenses over the last {timeRange === '3months' ? '3' : timeRange === '6months' ? '6' : timeRange === '12months' ? '12' : '24'} months</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SimpleChart data={analyticsData.expense_analytics} title="Monthly Expenses" />
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center"><TrendingUp className="w-5 h-5 mr-2" />Profitability Analysis</CardTitle>
+          <CardDescription>Income, Expenses, and Profit over time</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SimpleChart data={analyticsData.profit_analysis} title="Profit Analysis" />
+        </CardContent>
+      </Card>
     </div>
   );
 };
