@@ -186,7 +186,7 @@ router.post('/', [
     }
 
     const userId = req.user!.userId;
-    const { amount, description, category, payment_method = 'Cash', date, receipt_path } = req.body;
+    const { amount, description = null, category, payment_method = 'Cash', date, receipt_path = null } = req.body;
 
     // Start transaction
     const connection = await pool.getConnection();

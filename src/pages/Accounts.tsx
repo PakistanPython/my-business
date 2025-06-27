@@ -123,7 +123,7 @@ export const AccountsPage: React.FC = () => {
     setFormData({
       account_type: account.account_type,
       account_name: account.account_name,
-      balance: account.balance,
+      balance: Number(account.balance), // Ensure balance is a number for the form
       bank_name: account.bank_name || '',
       account_number: account.account_number || ''
     });
@@ -131,7 +131,7 @@ export const AccountsPage: React.FC = () => {
   };
 
   const handleDelete = async (account: Account) => {
-    if (window.confirm('Are you sure you want to delete this account?')) {
+    if (window.confirm('Are you sure you want to delete this account? This action cannot be undone.')) {
       try {
         await accountApi.delete(account.id);
         toast.success('Account deleted successfully');
@@ -184,7 +184,7 @@ export const AccountsPage: React.FC = () => {
   };
 
   const getAccountTypeBadge = (type: string) => {
-    const colors = {
+    const colors: { [key: string]: string } = {
       cash: 'bg-green-100 text-green-800',
       bank: 'bg-blue-100 text-blue-800',
       savings: 'bg-purple-100 text-purple-800',
@@ -192,17 +192,17 @@ export const AccountsPage: React.FC = () => {
     };
     
     return (
-      <Badge className={`${colors[type as keyof typeof colors]} hover:${colors[type as keyof typeof colors]}`}>
+      <Badge className={`${colors[type]} hover:${colors[type]}`}>
         {getAccountIcon(type)}
         <span className="ml-1 capitalize">{type}</span>
       </Badge>
     );
   };
 
-  const maskAccountNumber = (accountNumber: string) => {
+  const maskAccountNumber = (accountNumber: string | null) => {
     if (!accountNumber) return 'N/A';
     if (showAccountNumbers) return accountNumber;
-    return accountNumber.replace(/\d(?=\d{4})/g, '*');
+    return `****${accountNumber.slice(-4)}`;
   };
 
   const filteredAccounts = accounts.filter(account => {
@@ -216,7 +216,8 @@ export const AccountsPage: React.FC = () => {
     return matchesSearch && matchesType;
   });
 
-  const totalBalance = accounts.reduce((sum, account) => sum + account.balance, 0);
+  // --- THE FIX: Convert balance to Number before adding ---
+  const totalBalance = accounts.reduce((sum, account) => sum + Number(account.balance), 0);
 
   if (isLoading) {
     return (
@@ -235,22 +236,14 @@ export const AccountsPage: React.FC = () => {
           <p className="text-gray-600 mt-2">Manage your bank accounts, cash, and savings</p>
         </div>
         <div className="flex gap-2">
-          <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50">
-                <ArrowUpDown className="w-4 h-4 mr-2" />
-                Transfer
-              </Button>
-            </DialogTrigger>
-          </Dialog>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={openAddDialog} className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Account
-              </Button>
-            </DialogTrigger>
-          </Dialog>
+            <Button variant="outline" onClick={() => setIsTransferDialogOpen(true)} className="border-blue-300 text-blue-700 hover:bg-blue-50">
+              <ArrowUpDown className="w-4 h-4 mr-2" />
+              Transfer
+            </Button>
+            <Button onClick={openAddDialog} className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Account
+            </Button>
         </div>
       </div>
 
@@ -277,7 +270,8 @@ export const AccountsPage: React.FC = () => {
               {accounts.filter(a => a.account_type === 'cash').length}
             </div>
             <p className="text-xs text-green-600 mt-1">
-              ${accounts.filter(a => a.account_type === 'cash').reduce((sum, a) => sum + a.balance, 0).toFixed(2)}
+              {/* --- FIX APPLIED HERE --- */}
+              ${accounts.filter(a => a.account_type === 'cash').reduce((sum, a) => sum + Number(a.balance), 0).toFixed(2)}
             </p>
           </CardContent>
         </Card>
@@ -292,7 +286,8 @@ export const AccountsPage: React.FC = () => {
               {accounts.filter(a => a.account_type === 'bank').length}
             </div>
             <p className="text-xs text-purple-600 mt-1">
-              ${accounts.filter(a => a.account_type === 'bank').reduce((sum, a) => sum + a.balance, 0).toFixed(2)}
+              {/* --- FIX APPLIED HERE --- */}
+              ${accounts.filter(a => a.account_type === 'bank').reduce((sum, a) => sum + Number(a.balance), 0).toFixed(2)}
             </p>
           </CardContent>
         </Card>
@@ -307,7 +302,8 @@ export const AccountsPage: React.FC = () => {
               {accounts.filter(a => a.account_type === 'savings').length}
             </div>
             <p className="text-xs text-orange-600 mt-1">
-              ${accounts.filter(a => a.account_type === 'savings').reduce((sum, a) => sum + a.balance, 0).toFixed(2)}
+              {/* --- FIX APPLIED HERE --- */}
+              ${accounts.filter(a => a.account_type === 'savings').reduce((sum, a) => sum + Number(a.balance), 0).toFixed(2)}
             </p>
           </CardContent>
         </Card>
@@ -333,7 +329,7 @@ export const AccountsPage: React.FC = () => {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               <option value="all">All Types</option>
               <option value="cash">Cash</option>
@@ -379,11 +375,12 @@ export const AccountsPage: React.FC = () => {
                       <TableCell>{getAccountTypeBadge(account.account_type)}</TableCell>
                       <TableCell>{account.bank_name || 'N/A'}</TableCell>
                       <TableCell className="font-mono text-sm">
-                        {maskAccountNumber(account.account_number || '')}
+                        {maskAccountNumber(account.account_number)}
                       </TableCell>
                       <TableCell className="font-medium text-lg">
-                        <span className={account.balance >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          ${account.balance.toFixed(2)}
+                        {/* --- FIX APPLIED HERE --- */}
+                        <span className={Number(account.balance) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                          ${Number(account.balance).toFixed(2)}
                         </span>
                       </TableCell>
                       <TableCell>{new Date(account.created_at).toLocaleDateString()}</TableCell>
@@ -412,12 +409,15 @@ export const AccountsPage: React.FC = () => {
       </Card>
 
       {/* Account Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(isOpen) => { if(!isOpen) setEditingAccount(null); setIsDialogOpen(isOpen); }}>
+        <DialogTrigger asChild>
+            {/* This trigger is now controlled by the state and the button in the header */}
+        </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>{editingAccount ? 'Edit Account' : 'Add New Account'}</DialogTitle>
             <DialogDescription>
-              {editingAccount ? 'Update account information' : 'Create a new financial account'}
+              {editingAccount ? 'Update account information.' : 'Create a new financial account.'}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
@@ -437,7 +437,7 @@ export const AccountsPage: React.FC = () => {
                 <Label htmlFor="account_type">Account Type *</Label>
                 <Select 
                   value={formData.account_type} 
-                  onValueChange={(value: any) => setFormData({...formData, account_type: value})}
+                  onValueChange={(value: string) => setFormData({...formData, account_type: value})}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select account type" />
@@ -460,18 +460,20 @@ export const AccountsPage: React.FC = () => {
                   value={formData.balance}
                   onChange={(e) => setFormData({...formData, balance: parseFloat(e.target.value) || 0})}
                   placeholder="0.00"
+                  disabled={!!editingAccount} // Prevent editing balance on existing accounts
                 />
+                 {editingAccount && <p className="text-xs text-gray-500">Balance can only be changed via transactions or transfers.</p>}
               </div>
 
-              {(formData.account_type === 'bank' || formData.account_type === 'savings') && (
+              {(formData.account_type === 'bank' || formData.account_type === 'savings' || formData.account_type === 'investment') && (
                 <>
                   <div className="grid gap-2">
-                    <Label htmlFor="bank_name">Bank Name</Label>
+                    <Label htmlFor="bank_name">Bank/Institution Name</Label>
                     <Input
                       id="bank_name"
                       value={formData.bank_name}
                       onChange={(e) => setFormData({...formData, bank_name: e.target.value})}
-                      placeholder="Bank of America"
+                      placeholder="Financial Institution"
                     />
                   </div>
 
@@ -492,7 +494,7 @@ export const AccountsPage: React.FC = () => {
                 Cancel
               </Button>
               <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                {editingAccount ? 'Update' : 'Create'} Account
+                {editingAccount ? 'Update Account' : 'Create Account'}
               </Button>
             </DialogFooter>
           </form>
@@ -505,7 +507,7 @@ export const AccountsPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Transfer Between Accounts</DialogTitle>
             <DialogDescription>
-              Move money from one account to another
+              Move money from one account to another. This will create two transactions.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleTransfer}>
@@ -513,8 +515,8 @@ export const AccountsPage: React.FC = () => {
               <div className="grid gap-2">
                 <Label htmlFor="from_account">From Account *</Label>
                 <Select 
-                  value={transferForm.from_account_id.toString()} 
-                  onValueChange={(value) => setTransferForm({...transferForm, from_account_id: parseInt(value)})}
+                  value={transferForm.from_account_id ? transferForm.from_account_id.toString() : undefined} 
+                  onValueChange={(value) => setTransferForm({...transferForm, from_account_id: parseInt(value, 10)})}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select source account" />
@@ -522,7 +524,8 @@ export const AccountsPage: React.FC = () => {
                   <SelectContent>
                     {accounts.map((account) => (
                       <SelectItem key={account.id} value={account.id.toString()}>
-                        {account.account_name} (${account.balance.toFixed(2)})
+                        {/* --- FIX APPLIED HERE --- */}
+                        {account.account_name} (${Number(account.balance).toFixed(2)})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -532,16 +535,17 @@ export const AccountsPage: React.FC = () => {
               <div className="grid gap-2">
                 <Label htmlFor="to_account">To Account *</Label>
                 <Select 
-                  value={transferForm.to_account_id.toString()} 
-                  onValueChange={(value) => setTransferForm({...transferForm, to_account_id: parseInt(value)})}
+                  value={transferForm.to_account_id ? transferForm.to_account_id.toString() : undefined} 
+                  onValueChange={(value) => setTransferForm({...transferForm, to_account_id: parseInt(value, 10)})}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select destination account" />
                   </SelectTrigger>
                   <SelectContent>
                     {accounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id.toString()}>
-                        {account.account_name} (${account.balance.toFixed(2)})
+                      <SelectItem key={account.id} value={account.id.toString()} disabled={account.id === transferForm.from_account_id}>
+                        {/* --- FIX APPLIED HERE --- */}
+                        {account.account_name} (${Number(account.balance).toFixed(2)})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -563,12 +567,12 @@ export const AccountsPage: React.FC = () => {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="transfer_description">Description</Label>
+                <Label htmlFor="transfer_description">Description (Optional)</Label>
                 <Input
                   id="transfer_description"
                   value={transferForm.description}
                   onChange={(e) => setTransferForm({...transferForm, description: e.target.value})}
-                  placeholder="Transfer reason..."
+                  placeholder="Reason for transfer..."
                 />
               </div>
             </div>
