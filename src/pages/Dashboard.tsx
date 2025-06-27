@@ -13,12 +13,12 @@ import {
   BarChart3
 } from 'lucide-react';
 import { dashboardApi } from '../lib/api';
-import { DashboardData, DashboardSummary } from '../lib/types';
+import { DashboardData, AnalyticsData, DashboardSummary } from '../lib/types';
 import { Link } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [dashboardOverviewData, setDashboardOverviewData] = useState<DashboardData | null>(null);
+  const [analyticsPageData, setAnalyticsPageData] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,13 +29,13 @@ export const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const [summaryResponse, analyticsResponse] = await Promise.all([
+      const [overviewResponse, analyticsResponse] = await Promise.all([
         dashboardApi.getSummary(),
         dashboardApi.getAnalytics()
       ]);
       
-      setSummary(summaryResponse.data.data);
-      setDashboardData(analyticsResponse.data.data);
+      setDashboardOverviewData(overviewResponse.data.data);
+      setAnalyticsPageData(analyticsResponse.data.data);
     } catch (err: any) {
       console.error('Error loading dashboard data:', err);
       setError('Failed to load dashboard data');
@@ -68,6 +68,8 @@ export const Dashboard: React.FC = () => {
     }).format(amount);
   };
 
+  const summary = dashboardOverviewData?.summary;
+
   const statsCards = [
     {
       title: 'Total Income',
@@ -75,7 +77,7 @@ export const Dashboard: React.FC = () => {
       icon: TrendingUp,
       color: 'text-green-600',
       bgColor: 'bg-green-100',
-      change: '+12.5%',
+      change: '+12.5%', // These changes are hardcoded, ideally they would come from backend
       changeType: 'positive' as const,
       href: '/income'
     },
@@ -217,7 +219,7 @@ export const Dashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {dashboardData?.recent_transactions?.slice(0, 5).map((transaction, index) => (
+              {dashboardOverviewData?.recent_transactions?.slice(0, 5).map((transaction, index) => (
                 <div key={transaction.id || index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                   <div className="flex items-center space-x-3">
                     <div className={`p-2 rounded-full ${
