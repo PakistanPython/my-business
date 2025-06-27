@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Badge } from '../components/ui/badge';
 import { Textarea } from '../components/ui/textarea';
@@ -11,17 +11,11 @@ import { Progress } from '../components/ui/progress';
 import { 
   Heart, 
   TrendingUp, 
-  Calendar, 
-  DollarSign, 
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  Eye,
-  CreditCard,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  CreditCard,
+  Search
 } from 'lucide-react';
 import { charityApi } from '../lib/api';
 import { Charity, CharityPaymentForm } from '../lib/types';
@@ -67,7 +61,7 @@ export const CharityPage: React.FC = () => {
       return;
     }
 
-    if (selectedCharity && paymentForm.payment_amount > selectedCharity.amount_remaining) {
+    if (selectedCharity && paymentForm.payment_amount > Number(selectedCharity.amount_remaining)) {
       toast.error('Payment amount cannot exceed remaining amount');
       return;
     }
@@ -101,7 +95,7 @@ export const CharityPage: React.FC = () => {
       charity_id: charity.id,
       payment_amount: 0,
       payment_date: new Date().toISOString().split('T')[0],
-      recipient: '',
+      recipient: charity.recipient || '',
       description: ''
     });
     setIsPaymentDialogOpen(true);
@@ -121,7 +115,9 @@ export const CharityPage: React.FC = () => {
   };
 
   const getProgressPercentage = (charity: Charity) => {
-    return charity.amount_required > 0 ? (charity.amount_paid / charity.amount_required) * 100 : 0;
+    const required = Number(charity.amount_required);
+    const paid = Number(charity.amount_paid);
+    return required > 0 ? (paid / required) * 100 : 0;
   };
 
   const filteredCharities = charities.filter(charity => {
@@ -135,9 +131,10 @@ export const CharityPage: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const totalRequired = charities.reduce((sum, charity) => sum + charity.amount_required, 0);
-  const totalPaid = charities.reduce((sum, charity) => sum + charity.amount_paid, 0);
-  const totalRemaining = charities.reduce((sum, charity) => sum + charity.amount_remaining, 0);
+  // --- FIX 1: Convert to number during calculation ---
+  const totalRequired = charities.reduce((sum, charity) => sum + Number(charity.amount_required), 0);
+  const totalPaid = charities.reduce((sum, charity) => sum + Number(charity.amount_paid), 0);
+  const totalRemaining = charities.reduce((sum, charity) => sum + Number(charity.amount_remaining), 0);
 
   if (isLoading) {
     return (
@@ -165,6 +162,7 @@ export const CharityPage: React.FC = () => {
             <Heart className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
+            {/* The variables are now numbers, so .toFixed() is safe */}
             <div className="text-2xl font-bold text-green-900">${totalRequired.toFixed(2)}</div>
             <p className="text-xs text-green-600 mt-1">Total charity obligations</p>
           </CardContent>
@@ -199,7 +197,7 @@ export const CharityPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-900">
-              {totalRequired > 0 ? ((totalPaid / totalRequired) * 100).toFixed(1) : 0}%
+              {totalRequired > 0 ? ((totalPaid / totalRequired) * 100).toFixed(1) : '0.0'}%
             </div>
             <p className="text-xs text-purple-600 mt-1">Payment progress</p>
           </CardContent>
@@ -226,7 +224,7 @@ export const CharityPage: React.FC = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -240,7 +238,7 @@ export const CharityPage: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Income Source</TableHead>
+                  <TableHead>Income Source / Description</TableHead>
                   <TableHead>Required</TableHead>
                   <TableHead>Paid</TableHead>
                   <TableHead>Remaining</TableHead>
@@ -262,17 +260,18 @@ export const CharityPage: React.FC = () => {
                     <TableRow key={charity.id}>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{charity.income_description || 'N/A'}</div>
-                          <div className="text-sm text-gray-500">{charity.description}</div>
+                          <div className="font-medium">{charity.income_description || charity.description}</div>
+                          <div className="text-sm text-gray-500">{charity.recipient || 'N/A'}</div>
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">${charity.amount_required.toFixed(2)}</TableCell>
-                      <TableCell className="text-green-600">${charity.amount_paid.toFixed(2)}</TableCell>
-                      <TableCell className="text-red-600">${charity.amount_remaining.toFixed(2)}</TableCell>
+                      {/* --- FIX 2: Convert to number before .toFixed() --- */}
+                      <TableCell className="font-medium">${Number(charity.amount_required).toFixed(2)}</TableCell>
+                      <TableCell className="text-green-600">${Number(charity.amount_paid).toFixed(2)}</TableCell>
+                      <TableCell className="text-red-600">${Number(charity.amount_remaining).toFixed(2)}</TableCell>
                       <TableCell>
-                        <div className="w-full">
-                          <Progress value={getProgressPercentage(charity)} className="w-20" />
-                          <span className="text-xs text-gray-500 mt-1">
+                        <div className="flex items-center space-x-2">
+                          <Progress value={getProgressPercentage(charity)} className="w-16" />
+                          <span className="text-xs text-gray-500">
                             {getProgressPercentage(charity).toFixed(0)}%
                           </span>
                         </div>
@@ -327,7 +326,8 @@ export const CharityPage: React.FC = () => {
                   type="number"
                   step="0.01"
                   min="0.01"
-                  max={selectedCharity?.amount_remaining || 0}
+                  // --- FIX 3: Convert to number for max property ---
+                  max={Number(selectedCharity?.amount_remaining) || 0}
                   value={paymentForm.payment_amount}
                   onChange={(e) => setPaymentForm({
                     ...paymentForm,
@@ -338,7 +338,8 @@ export const CharityPage: React.FC = () => {
                 />
                 {selectedCharity && (
                   <p className="text-sm text-gray-500">
-                    Remaining: ${selectedCharity.amount_remaining.toFixed(2)}
+                    {/* --- FIX 4: Convert to number before .toFixed() --- */}
+                    Remaining: ${Number(selectedCharity.amount_remaining).toFixed(2)}
                   </p>
                 )}
               </div>
