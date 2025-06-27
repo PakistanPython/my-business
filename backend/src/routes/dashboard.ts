@@ -247,7 +247,7 @@ router.get('/analytics', [
     // Get profitability analysis
     const [profitAnalysis] = await pool.execute(
       `SELECT 
-        ${dateFormat} as period,
+        COALESCE(income.period, expenses.period) as period,
         COALESCE(income.total_income, 0) as income,
         COALESCE(expenses.total_expenses, 0) as expenses,
         (COALESCE(income.total_income, 0) - COALESCE(expenses.total_expenses, 0)) as profit,
@@ -260,16 +260,42 @@ router.get('/analytics', [
          SELECT ${dateFormat} as period, SUM(amount) as total_income
          FROM income 
          WHERE user_id = ? ${dateFilter}
-         GROUP BY ${groupBy}
+         GROUP BY period
        ) income
-       FULL OUTER JOIN (
+       LEFT JOIN (
          SELECT ${dateFormat} as period, SUM(amount) as total_expenses
          FROM expenses 
          WHERE user_id = ? ${dateFilter}
-         GROUP BY ${groupBy}
+         GROUP BY period
        ) expenses ON income.period = expenses.period
+       
+       UNION ALL
+       
+       SELECT 
+         COALESCE(income.period, expenses.period) as period,
+         COALESCE(income.total_income, 0) as income,
+         COALESCE(expenses.total_expenses, 0) as expenses,
+         (COALESCE(income.total_income, 0) - COALESCE(expenses.total_expenses, 0)) as profit,
+         CASE 
+           WHEN COALESCE(income.total_income, 0) > 0 
+           THEN ROUND(((COALESCE(income.total_income, 0) - COALESCE(expenses.total_expenses, 0)) / income.total_income) * 100, 2)
+           ELSE 0 
+         END as profit_margin
+       FROM (
+         SELECT ${dateFormat} as period, SUM(amount) as total_income
+         FROM income 
+         WHERE user_id = ? ${dateFilter}
+         GROUP BY period
+       ) income
+       RIGHT JOIN (
+         SELECT ${dateFormat} as period, SUM(amount) as total_expenses
+         FROM expenses 
+         WHERE user_id = ? ${dateFilter}
+         GROUP BY period
+       ) expenses ON income.period = expenses.period
+       WHERE income.period IS NULL
        ORDER BY period`,
-      [userId, userId]
+      [userId, userId, userId, userId]
     ) as any[];
 
     res.json({
