@@ -133,7 +133,7 @@ export const IncomePage: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const totalIncome = filteredIncome.reduce((sum, item) => sum + item.amount, 0);
+  const totalIncome = filteredIncome.reduce((sum, item) => sum + Number(item.amount), 0);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -285,7 +285,7 @@ export const IncomePage: React.FC = () => {
                     return itemDate.getMonth() === currentDate.getMonth() && 
                            itemDate.getFullYear() === currentDate.getFullYear();
                   })
-                  .reduce((sum, item) => sum + item.amount, 0)
+                  .reduce((sum, item) => sum + Number(item.amount), 0)
               )}
             </div>
             <p className="text-xs text-gray-600">Current month</p>
@@ -299,7 +299,7 @@ export const IncomePage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {formatCurrency(filteredIncome.length > 0 ? totalIncome / filteredIncome.length : 0)}
+              {formatCurrency(filteredIncome.length > 0 ? Number(totalIncome) / filteredIncome.length : 0)}
             </div>
             <p className="text-xs text-gray-600">Average amount</p>
           </CardContent>

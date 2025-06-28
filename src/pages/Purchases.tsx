@@ -61,7 +61,7 @@ export const PurchasesPage: React.FC = () => {
       setIsLoading(true);
       const [purchasesResponse, categoriesResponse] = await Promise.all([
         purchaseApi.getAll(),
-        categoryApi.getAll({ type: 'purchase', _: new Date().getTime() })
+        categoryApi.getAll({ type: 'purchase' })
       ]);
       
       const fetchedPurchases = purchasesResponse.data.data.purchases || [];
@@ -177,9 +177,8 @@ export const PurchasesPage: React.FC = () => {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={async () => {
+            <Button onClick={() => {
               resetForm();
-              await loadData();
               setIsDialogOpen(true);
             }}>
               <Plus className="mr-2 h-4 w-4" />
