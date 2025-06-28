@@ -25,7 +25,7 @@ router.post('/register', [
   body('full_name')
     .trim()
     .isLength({ min: 2, max: 100 })
-    .withMessage('Full name must be between 2 and 100 characters')
+    .withMessage('Full name must be between 2 and 100 characters'),
 ], async (req, res) => {
   try {
     // Check for validation errors
@@ -89,7 +89,23 @@ router.post('/register', [
       { name: 'Bills & Utilities', type: 'expense', color: '#06B6D4', icon: 'receipt' },
       { name: 'Healthcare', type: 'expense', color: '#10B981', icon: 'heart' },
       { name: 'Education', type: 'expense', color: '#3B82F6', icon: 'book' },
-      { name: 'Other Expenses', type: 'expense', color: '#6B7280', icon: 'minus-circle' }
+      { name: 'Other Expenses', type: 'expense', color: '#6B7280', icon: 'minus-circle' },
+      
+      // Purchase categories
+      { name: 'Inventory', type: 'purchase', color: '#059669', icon: 'package' },
+      { name: 'Raw Materials', type: 'purchase', color: '#DC2626', icon: 'layers' },
+      { name: 'Equipment', type: 'purchase', color: '#7C3AED', icon: 'tool' },
+      { name: 'Office Supplies', type: 'purchase', color: '#0891B2', icon: 'clipboard' },
+      { name: 'Technology', type: 'purchase', color: '#EA580C', icon: 'monitor' },
+      { name: 'Other Purchases', type: 'purchase', color: '#6B7280', icon: 'shopping-cart' },
+      
+      // Sale categories
+      { name: 'Product Sales', type: 'sale', color: '#16A34A', icon: 'shopping-bag' },
+      { name: 'Service Sales', type: 'sale', color: '#2563EB', icon: 'briefcase' },
+      { name: 'Digital Sales', type: 'sale', color: '#9333EA', icon: 'smartphone' },
+      { name: 'Wholesale', type: 'sale', color: '#DC2626', icon: 'truck' },
+      { name: 'Retail', type: 'sale', color: '#059669', icon: 'store' },
+      { name: 'Other Sales', type: 'sale', color: '#6B7280', icon: 'tag' }
     ];
 
     for (const category of defaultCategories) {

@@ -18,12 +18,17 @@ router.get('/summary', async (req, res) => {
       `SELECT 
         (SELECT COALESCE(SUM(amount), 0) FROM income WHERE user_id = ?) as total_income,
         (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE user_id = ?) as total_expenses,
+        (SELECT COALESCE(SUM(amount), 0) FROM purchases WHERE user_id = ?) as total_purchases,
+        0 as total_sales_revenue,
+        0 as total_sales_profit,
+        (SELECT COUNT(*) FROM purchases WHERE user_id = ?) as total_purchases_count,
+        (SELECT COUNT(*) FROM sales WHERE user_id = ?) as total_sales_count,
         (SELECT COALESCE(SUM(balance), 0) FROM accounts WHERE user_id = ?) as total_accounts_balance,
         (SELECT COALESCE(SUM(current_balance), 0) FROM loans WHERE user_id = ? AND status = 'active') as total_active_loans,
         (SELECT COALESCE(SUM(amount_required), 0) FROM charity WHERE user_id = ?) as total_charity_required,
         (SELECT COALESCE(SUM(amount_paid), 0) FROM charity WHERE user_id = ?) as total_charity_paid,
         (SELECT COALESCE(SUM(amount_remaining), 0) FROM charity WHERE user_id = ?) as total_charity_remaining`,
-      [userId, userId, userId, userId, userId, userId, userId]
+      [userId, userId, userId, userId, userId, userId, userId, userId, userId, userId, userId, userId]
     ) as any[];
 
     const summary = financialSummary[0];
@@ -261,55 +266,38 @@ router.get('/analytics', [
 
     // Get profitability analysis
     const [profitAnalysis] = await pool.execute(
-      `SELECT 
-        COALESCE(income.period, expenses.period) as period,
-        COALESCE(income.total_income, 0) as income,
-        COALESCE(expenses.total_expenses, 0) as expenses,
-        (COALESCE(income.total_income, 0) - COALESCE(expenses.total_expenses, 0)) as profit,
-        CASE 
-          WHEN COALESCE(income.total_income, 0) > 0 
-          THEN ROUND(((COALESCE(income.total_income, 0) - COALESCE(expenses.total_expenses, 0)) / income.total_income) * 100, 2)
-          ELSE 0 
+      `SELECT
+        all_periods.period,
+        COALESCE(income_data.total_income, 0) as income,
+        COALESCE(expenses_data.total_expenses, 0) as expenses,
+        (COALESCE(income_data.total_income, 0) - COALESCE(expenses_data.total_expenses, 0)) as profit,
+        CASE
+            WHEN COALESCE(income_data.total_income, 0) > 0
+            THEN ROUND(((COALESCE(income_data.total_income, 0) - COALESCE(expenses_data.total_expenses, 0)) / income_data.total_income) * 100, 2)
+            ELSE 0
         END as profit_margin
        FROM (
-         SELECT ${dateFormat} as period, SUM(amount) as total_income
-         FROM income 
-         WHERE user_id = ? ${dateFilter}
-         GROUP BY period
-       ) income
+           SELECT DISTINCT ${dateFormat} as period
+           FROM income
+           WHERE user_id = ? ${dateFilter}
+           UNION
+           SELECT DISTINCT ${dateFormat} as period
+           FROM expenses
+           WHERE user_id = ? ${dateFilter}
+       ) as all_periods
        LEFT JOIN (
-         SELECT ${dateFormat} as period, SUM(amount) as total_expenses
-         FROM expenses 
-         WHERE user_id = ? ${dateFilter}
-         GROUP BY period
-       ) expenses ON income.period = expenses.period
-       
-       UNION ALL
-       
-       SELECT 
-         COALESCE(income.period, expenses.period) as period,
-         COALESCE(income.total_income, 0) as income,
-         COALESCE(expenses.total_expenses, 0) as expenses,
-         (COALESCE(income.total_income, 0) - COALESCE(expenses.total_expenses, 0)) as profit,
-         CASE 
-           WHEN COALESCE(income.total_income, 0) > 0 
-           THEN ROUND(((COALESCE(income.total_income, 0) - COALESCE(expenses.total_expenses, 0)) / income.total_income) * 100, 2)
-           ELSE 0 
-         END as profit_margin
-       FROM (
-         SELECT ${dateFormat} as period, SUM(amount) as total_income
-         FROM income 
-         WHERE user_id = ? ${dateFilter}
-         GROUP BY period
-       ) income
-       RIGHT JOIN (
-         SELECT ${dateFormat} as period, SUM(amount) as total_expenses
-         FROM expenses 
-         WHERE user_id = ? ${dateFilter}
-         GROUP BY period
-       ) expenses ON income.period = expenses.period
-       WHERE income.period IS NULL
-       ORDER BY period`,
+           SELECT ${dateFormat} as period, SUM(amount) as total_income
+           FROM income
+           WHERE user_id = ? ${dateFilter}
+           GROUP BY ${groupBy}
+       ) as income_data ON all_periods.period = income_data.period
+       LEFT JOIN (
+           SELECT ${dateFormat} as period, SUM(amount) as total_expenses
+           FROM expenses
+           WHERE user_id = ? ${dateFilter}
+           GROUP BY ${groupBy}
+       ) as expenses_data ON all_periods.period = expenses_data.period
+       ORDER BY all_periods.period`,
       [userId, userId, userId, userId]
     ) as any[];
 

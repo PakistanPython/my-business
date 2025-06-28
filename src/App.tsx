@@ -13,6 +13,7 @@ import { Dashboard } from './pages/Dashboard';
 import { IncomePage } from './pages/Income';
 import { ExpensesPage } from './pages/Expenses';
 import { PurchasesPage } from './pages/Purchases';
+import { SalesPage } from './pages/Sales';
 import { CharityPage } from './pages/Charity';
 import { AccountsPage } from './pages/Accounts';
 import { LoansPage } from './pages/Loans';
@@ -42,6 +43,7 @@ function App() {
                 <Route path="income" element={<IncomePage />} />
                 <Route path="expenses" element={<ExpensesPage />} />
                 <Route path="purchases" element={<PurchasesPage />} />
+                <Route path="sales" element={<SalesPage />} />
                 <Route path="charity" element={<CharityPage />} />
                 <Route path="accounts" element={<AccountsPage />} />
                 <Route path="loans" element={<LoansPage />} />

@@ -10,7 +10,7 @@ const auth_1 = require("../middleware/auth");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
 router.get('/', [
-    (0, express_validator_1.query)('type').optional().isIn(['income', 'expense']).withMessage('Type must be income or expense')
+    (0, express_validator_1.query)('type').optional().isIn(['income', 'expense', 'purchase', 'sale']).withMessage('Type must be income, expense, purchase, or sale')
 ], async (req, res) => {
     try {
         const errors = (0, express_validator_1.validationResult)(req);
@@ -29,10 +29,13 @@ router.get('/', [
             whereClause += ' AND type = ?';
             whereParams.push(type);
         }
+        console.log('Category API - whereClause:', whereClause);
+        console.log('Category API - whereParams:', whereParams);
         const [categories] = await database_1.pool.execute(`SELECT id, name, type, color, icon, created_at 
        FROM categories 
        ${whereClause} 
        ORDER BY type, name`, whereParams);
+        console.log('Category API - Fetched categories:', categories);
         const groupedCategories = categories.reduce((acc, category) => {
             if (!acc[category.type]) {
                 acc[category.type] = [];
@@ -93,8 +96,8 @@ router.post('/', [
         .isLength({ max: 50 })
         .withMessage('Category name is required and cannot exceed 50 characters'),
     (0, express_validator_1.body)('type')
-        .isIn(['income', 'expense'])
-        .withMessage('Type must be income or expense'),
+        .isIn(['income', 'expense', 'purchase', 'sale'])
+        .withMessage('Type must be income, expense, purchase, or sale'),
     (0, express_validator_1.body)('color')
         .optional()
         .matches(/^#[0-9A-F]{6}$/i)
@@ -249,13 +252,15 @@ router.delete('/:id', async (req, res) => {
         const category = existingCategories[0];
         const [incomeUsage] = await database_1.pool.execute('SELECT COUNT(*) as count FROM income WHERE user_id = ? AND category = ?', [userId, category.name]);
         const [expenseUsage] = await database_1.pool.execute('SELECT COUNT(*) as count FROM expenses WHERE user_id = ? AND category = ?', [userId, category.name]);
-        if (incomeUsage[0].count > 0 || expenseUsage[0].count > 0) {
+        const [purchaseUsage] = await database_1.pool.execute('SELECT COUNT(*) as count FROM purchases WHERE user_id = ? AND category = ?', [userId, category.name]);
+        if (incomeUsage[0].count > 0 || expenseUsage[0].count > 0 || purchaseUsage[0].count > 0) {
             return res.status(400).json({
                 success: false,
                 message: 'Cannot delete category that is being used in transactions',
                 data: {
                     income_count: incomeUsage[0].count,
-                    expense_count: expenseUsage[0].count
+                    expense_count: expenseUsage[0].count,
+                    purchase_count: purchaseUsage[0].count
                 }
             });
         }
@@ -378,9 +383,20 @@ router.get('/usage/summary', async (req, res) => {
          FROM expenses 
          WHERE user_id = ?
          GROUP BY category
+
+         UNION ALL
+
+         SELECT
+           category,
+           'purchase' as type,
+           COUNT(*) as transaction_count,
+           SUM(amount) as total_amount
+         FROM purchases
+         WHERE user_id = ?
+         GROUP BY category
        ) usage ON c.name = usage.category AND c.type = usage.type
        WHERE c.user_id = ?
-       ORDER BY c.type, usage.total_amount DESC, c.name`, [userId, userId, userId]);
+       ORDER BY c.type, usage.total_amount DESC, c.name`, [userId, userId, userId, userId]);
         res.json({
             success: true,
             data: { categories: categoriesWithUsage }

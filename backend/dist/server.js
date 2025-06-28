@@ -19,6 +19,8 @@ const account_1 = __importDefault(require("./routes/account"));
 const loan_1 = __importDefault(require("./routes/loan"));
 const dashboard_1 = __importDefault(require("./routes/dashboard"));
 const category_1 = __importDefault(require("./routes/category"));
+const purchase_1 = __importDefault(require("./routes/purchase"));
+const sale_1 = __importDefault(require("./routes/sale"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
@@ -53,6 +55,24 @@ app.get('/health', (req, res) => {
         environment: process.env.NODE_ENV || 'development'
     });
 });
+app.get('/api/debug/schema', async (req, res) => {
+    try {
+        const [tables] = await database_1.pool.execute(`
+      SELECT table_name, column_name, data_type, column_type
+      FROM information_schema.columns
+      WHERE table_schema = DATABASE()
+      ORDER BY table_name, ordinal_position
+    `);
+        res.json(tables);
+    }
+    catch (error) {
+        console.error('Error fetching schema:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch database schema'
+        });
+    }
+});
 app.use('/api/auth', auth_1.default);
 app.use('/api/income', income_1.default);
 app.use('/api/expenses', expense_1.default);
@@ -61,6 +81,8 @@ app.use('/api/accounts', account_1.default);
 app.use('/api/loans', loan_1.default);
 app.use('/api/dashboard', dashboard_1.default);
 app.use('/api/categories', category_1.default);
+app.use('/api/purchases', purchase_1.default);
+app.use('/api/sales', sale_1.default);
 app.get('/', (req, res) => {
     res.json({
         message: 'My Business Management System API',

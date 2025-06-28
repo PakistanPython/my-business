@@ -62,6 +62,7 @@ const createTables = async () => {
       email VARCHAR(100) UNIQUE NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
       full_name VARCHAR(100) NOT NULL,
+      business_name VARCHAR(150),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )`,
@@ -109,6 +110,28 @@ const createTables = async () => {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`,
+
+    // Sales table
+    `CREATE TABLE IF NOT EXISTS sales (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      user_id INT NOT NULL,
+      purchase_id INT,
+      amount DECIMAL(15,2) NOT NULL,
+      selling_price DECIMAL(15,2) NOT NULL,
+      profit DECIMAL(15,2) GENERATED ALWAYS AS (selling_price - amount) STORED,
+      profit_percentage DECIMAL(5,2) GENERATED ALWAYS AS ((selling_price - amount) / amount * 100) STORED,
+      description TEXT,
+      customer_name VARCHAR(100),
+      customer_contact VARCHAR(50),
+      payment_method VARCHAR(50) DEFAULT 'Cash',
+      date DATE NOT NULL,
+      status ENUM('pending', 'completed', 'cancelled') DEFAULT 'completed',
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE SET NULL
     )`,
 
     // Charity table
@@ -165,7 +188,7 @@ const createTables = async () => {
     `CREATE TABLE IF NOT EXISTS transactions (
       id INT PRIMARY KEY AUTO_INCREMENT,
       user_id INT NOT NULL,
-      transaction_type ENUM('income', 'expense', 'purchase', 'transfer', 'loan_payment', 'charity') NOT NULL,
+      transaction_type ENUM('income', 'expense', 'purchase', 'sale', 'transfer', 'loan_payment', 'charity') NOT NULL,
       reference_id INT,
       reference_table VARCHAR(50),
       amount DECIMAL(15,2) NOT NULL,
@@ -182,7 +205,7 @@ const createTables = async () => {
       id INT PRIMARY KEY AUTO_INCREMENT,
       user_id INT NOT NULL,
       name VARCHAR(50) NOT NULL,
-      type ENUM('income', 'expense', 'purchase') NOT NULL,
+      type ENUM('income', 'expense', 'purchase', 'sale') NOT NULL,
       color VARCHAR(7) DEFAULT '#3B82F6',
       icon VARCHAR(50) DEFAULT 'circle',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

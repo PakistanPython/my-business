@@ -168,7 +168,8 @@ export const CategoriesPage: React.FC = () => {
     return <Tag className="w-4 h-4" />;
   };
 
-  const getTypeBadge = (type: string) => {
+  const getTypeBadge = (type: string, category: Category) => {
+    console.log('getTypeBadge received type:', type, 'for category:', category.name); // Diagnostic log
     if (type === 'income') {
       return (
         <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
@@ -183,14 +184,21 @@ export const CategoriesPage: React.FC = () => {
           Expense
         </Badge>
       );
-    } else {
+    } else if (type === 'purchase') {
       return (
         <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
           <ShoppingBag className="w-3 h-3 mr-1" />
           Purchase
         </Badge>
       );
-    }
+    } else if (type === 'sale') {
+      return (
+        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+          <DollarSign className="w-3 h-3 mr-1" />
+          Sale
+        </Badge>
+      );
+    } 
   };
 
   const filteredCategories = categories.filter(category => {
@@ -294,19 +302,13 @@ export const CategoriesPage: React.FC = () => {
                 .slice(0, 5)
                 .map((category) => (
                   <div key={category.id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div 
-                        className="w-4 h-4 rounded-full flex items-center justify-center text-white text-xs"
-                        style={{ backgroundColor: category.color || '#3B82F6' }}
-                      >
-                        {getIconComponent(category.icon || 'Tag')}
-                      </div>
-                      <span className="font-medium">{category.name}</span>
+                    <div 
+                      className="w-4 h-4 rounded-full flex items-center justify-center text-white text-xs"
+                      style={{ backgroundColor: category.color || '#3B82F6' }}
+                    >
+                      {getIconComponent(category.icon || 'Tag')}
                     </div>
-                    <div className="text-right">
-                      <div className="font-medium">{category.transaction_count || 0} transactions</div>
-                      <div className="text-sm text-gray-500">${(category.total_amount || 0).toFixed(2)}</div>
-                    </div>
+                    <span className="font-medium">{category.name}</span>
                   </div>
                 ))}
               {incomeCategories.length === 0 && (
@@ -331,19 +333,13 @@ export const CategoriesPage: React.FC = () => {
                 .slice(0, 5)
                 .map((category) => (
                   <div key={category.id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div 
-                        className="w-4 h-4 rounded-full flex items-center justify-center text-white text-xs"
-                        style={{ backgroundColor: category.color || '#EF4444' }}
-                      >
-                        {getIconComponent(category.icon || 'Tag')}
-                      </div>
-                      <span className="font-medium">{category.name}</span>
+                    <div 
+                      className="w-4 h-4 rounded-full flex items-center justify-center text-white text-xs"
+                      style={{ backgroundColor: category.color || '#EF4444' }}
+                    >
+                      {getIconComponent(category.icon || 'Tag')}
                     </div>
-                    <div className="text-right">
-                      <div className="font-medium">{category.transaction_count || 0} transactions</div>
-                      <div className="text-sm text-gray-500">${(category.total_amount || 0).toFixed(2)}</div>
-                    </div>
+                    <span className="font-medium">{category.name}</span>
                   </div>
                 ))}
               {expenseCategories.length === 0 && (
@@ -380,6 +376,7 @@ export const CategoriesPage: React.FC = () => {
               <option value="income">Income</option>
               <option value="expense">Expense</option>
               <option value="purchase">Purchase</option>
+              <option value="sale">Sale</option>
             </select>
           </div>
 
@@ -416,7 +413,7 @@ export const CategoriesPage: React.FC = () => {
                           <span className="font-medium">{category.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{getTypeBadge(category.type)}</TableCell>
+                      <TableCell>{getTypeBadge(category.type, category)}</TableCell>
                       <TableCell>
                         <div className="flex items-center">
                           <Hash className="w-4 h-4 mr-1 text-gray-400" />
@@ -486,6 +483,7 @@ export const CategoriesPage: React.FC = () => {
                     <SelectItem value="income">Income</SelectItem>
                     <SelectItem value="expense">Expense</SelectItem>
                     <SelectItem value="purchase">Purchase</SelectItem>
+                    <SelectItem value="sale">Sale</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -543,7 +541,7 @@ export const CategoriesPage: React.FC = () => {
                     {getIconComponent(formData.icon)}
                   </div>
                   <span className="font-medium">{formData.name || 'Category Name'}</span>
-                  {getTypeBadge(formData.type)}
+                  {getTypeBadge(formData.type, formData as Category)}
                 </div>
               </div>
             </div>

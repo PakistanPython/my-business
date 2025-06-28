@@ -5,7 +5,7 @@ import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import { testConnection, initializeDatabase } from './config/database';
+import { pool, testConnection, initializeDatabase } from './config/database';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -17,6 +17,7 @@ import loanRoutes from './routes/loan';
 import dashboardRoutes from './routes/dashboard';
 import categoryRoutes from './routes/category';
 import purchaseRoutes from './routes/purchase';
+import saleRoutes from './routes/sale';
 
 // Load environment variables
 dotenv.config();
@@ -69,6 +70,26 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Temporary endpoint to inspect database schema
+app.get('/api/debug/schema', async (req, res) => {
+  try {
+    const [tables] = await pool.execute(`
+      SELECT table_name, column_name, data_type, column_type
+      FROM information_schema.columns
+      WHERE table_schema = DATABASE()
+      ORDER BY table_name, ordinal_position
+    `);
+    
+    res.json(tables);
+  } catch (error) {
+    console.error('Error fetching schema:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch database schema'
+    });
+  }
+});
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/income', incomeRoutes);
@@ -79,6 +100,7 @@ app.use('/api/loans', loanRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/purchases', purchaseRoutes);
+app.use('/api/sales', saleRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {

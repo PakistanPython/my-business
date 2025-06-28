@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Building2, Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { Building2, Eye, EyeOff, Mail, Lock, User, Building } from 'lucide-react';
 
 export const RegisterForm: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -10,6 +10,7 @@ export const RegisterForm: React.FC = () => {
     password: '',
     confirmPassword: '',
     full_name: '',
+    business_name: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -136,6 +137,28 @@ export const RegisterForm: React.FC = () => {
               {errors.full_name && (
                 <p className="mt-1 text-sm text-red-600">{errors.full_name}</p>
               )}
+            </div>
+
+            {/* Business Name field */}
+            <div>
+              <label htmlFor="business_name" className="block text-sm font-medium text-gray-700">
+                Business Name (Optional)
+              </label>
+              <div className="mt-1 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Building className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="business_name"
+                  name="business_name"
+                  type="text"
+                  autoComplete="organization"
+                  value={formData.business_name}
+                  onChange={handleInputChange}
+                  className="appearance-none relative block w-full pl-10 pr-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="Enter your business name"
+                />
+              </div>
             </div>
 
             {/* Username field */}

@@ -10,7 +10,7 @@ router.use(authenticateToken);
 
 // Get all categories
 router.get('/', [
-  query('type').optional().isIn(['income', 'expense', 'purchase']).withMessage('Type must be income, expense, or purchase')
+  query('type').optional().isIn(['income', 'expense', 'purchase', 'sale']).withMessage('Type must be income, expense, purchase, or sale')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -117,8 +117,8 @@ router.post('/', [
     .isLength({ max: 50 })
     .withMessage('Category name is required and cannot exceed 50 characters'),
   body('type')
-    .isIn(['income', 'expense', 'purchase'])
-    .withMessage('Type must be income, expense, or purchase'),
+    .isIn(['income', 'expense', 'purchase', 'sale'])
+    .withMessage('Type must be income, expense, purchase, or sale'),
   body('color')
     .optional()
     .matches(/^#[0-9A-F]{6}$/i)

@@ -76,6 +76,16 @@ export const purchaseApi = {
   getStats: () => api.get('/purchases/stats/summary'),
 };
 
+export const saleApi = {
+  getAll: (params?: any) => api.get('/sales', { params }),
+  getById: (id: number) => api.get(`/sales/${id}`),
+  create: (data: any) => api.post('/sales', data),
+  update: (id: number, data: any) => api.put(`/sales/${id}`, data),
+  delete: (id: number) => api.delete(`/sales/${id}`),
+  getSummary: () => api.get('/sales/summary'),
+  getAvailablePurchases: () => api.get('/sales/available-purchases'),
+};
+
 export const charityApi = {
   getAll: (params?: any) => api.get('/charity', { params }),
   getById: (id: number) => api.get(`/charity/${id}`),

@@ -13,7 +13,8 @@ import {
   User,
   BarChart3,
   Building2,
-  ShoppingCart
+  ShoppingCart,
+  ShoppingBag
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -26,6 +27,7 @@ const navigation = [
   { name: 'Income', href: '/income', icon: TrendingUp },
   { name: 'Expenses', href: '/expenses', icon: TrendingDown },
   { name: 'Purchases', href: '/purchases', icon: ShoppingCart },
+  { name: 'Sales', href: '/sales', icon: ShoppingBag },
   { name: 'Charity', href: '/charity', icon: Heart },
   { name: 'Accounts', href: '/accounts', icon: Wallet },
   { name: 'Loans', href: '/loans', icon: CreditCard },

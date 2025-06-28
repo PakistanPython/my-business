@@ -50,12 +50,12 @@ router.get('/', [
             whereClause += ' AND date <= ?';
             whereParams.push(endDate);
         }
-        const [countResult] = await database_1.pool.execute(`SELECT COUNT(*) as total FROM expenses ${whereClause}`, whereParams);
+        const [countResult] = await database_1.pool.execute(`SELECT COUNT(*) as total FROM purchases ${whereClause}`, whereParams);
         const total = countResult[0].total;
-        const [expenseRecords] = await database_1.pool.execute(`SELECT 
+        const [purchaseRecords] = await database_1.pool.execute(`SELECT 
         id, amount, description, category, payment_method, date, 
         receipt_path, created_at, updated_at
-       FROM expenses 
+       FROM purchases 
        ${whereClause} 
        ORDER BY ${sortBy} ${sortOrder.toUpperCase()}
        LIMIT ? OFFSET ?`, [...whereParams, limit, offset]);
@@ -65,7 +65,7 @@ router.get('/', [
         res.json({
             success: true,
             data: {
-                expenses: expenseRecords,
+                purchases: purchaseRecords,
                 pagination: {
                     currentPage: page,
                     totalPages,
@@ -78,7 +78,7 @@ router.get('/', [
         });
     }
     catch (error) {
-        console.error('Get expenses error:', error);
+        console.error('Get purchases error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -88,31 +88,31 @@ router.get('/', [
 router.get('/:id', async (req, res) => {
     try {
         const userId = req.user.userId;
-        const expenseId = parseInt(req.params.id);
-        if (isNaN(expenseId)) {
+        const purchaseId = parseInt(req.params.id);
+        if (isNaN(purchaseId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid expense ID'
+                message: 'Invalid purchase ID'
             });
         }
-        const [expenseRecords] = await database_1.pool.execute(`SELECT 
+        const [purchaseRecords] = await database_1.pool.execute(`SELECT 
         id, amount, description, category, payment_method, date, 
         receipt_path, created_at, updated_at
-       FROM expenses 
-       WHERE id = ? AND user_id = ?`, [expenseId, userId]);
-        if (expenseRecords.length === 0) {
+       FROM purchases 
+       WHERE id = ? AND user_id = ?`, [purchaseId, userId]);
+        if (purchaseRecords.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'Expense record not found'
+                message: 'Purchase record not found'
             });
         }
         res.json({
             success: true,
-            data: { expense: expenseRecords[0] }
+            data: { purchase: purchaseRecords[0] }
         });
     }
     catch (error) {
-        console.error('Get expense by ID error:', error);
+        console.error('Get purchase by ID error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -161,16 +161,16 @@ router.post('/', [
         const connection = await database_1.pool.getConnection();
         await connection.beginTransaction();
         try {
-            const [expenseResult] = await connection.execute('INSERT INTO expenses (user_id, amount, description, category, payment_method, date, receipt_path) VALUES (?, ?, ?, ?, ?, ?, ?)', [userId, amount, description, category, payment_method, date, receipt_path]);
-            const expenseId = expenseResult.insertId;
-            const [expenseRecords] = await connection.execute('SELECT * FROM expenses WHERE id = ?', [expenseId]);
-            const expenseRecord = expenseRecords[0];
-            await connection.execute('INSERT INTO transactions (user_id, transaction_type, reference_id, reference_table, amount, description, date) VALUES (?, ?, ?, ?, ?, ?, ?)', [userId, 'expense', expenseId, 'expenses', amount, `Expense: ${description || category}`, date]);
+            const [purchaseResult] = await connection.execute('INSERT INTO purchases (user_id, amount, description, category, payment_method, date, receipt_path) VALUES (?, ?, ?, ?, ?, ?, ?)', [userId, amount, description, category, payment_method, date, receipt_path]);
+            const purchaseId = purchaseResult.insertId;
+            const [purchaseRecords] = await connection.execute('SELECT * FROM purchases WHERE id = ?', [purchaseId]);
+            const purchaseRecord = purchaseRecords[0];
+            await connection.execute('INSERT INTO transactions (user_id, transaction_type, reference_id, reference_table, amount, description, date) VALUES (?, ?, ?, ?, ?, ?, ?)', [userId, 'purchase', purchaseId, 'purchases', amount, `Purchase: ${description || category}`, date]);
             await connection.commit();
             res.status(201).json({
                 success: true,
-                message: 'Expense record created successfully',
-                data: { expense: expenseRecord }
+                message: 'Purchase record created successfully',
+                data: { purchase: purchaseRecord }
             });
         }
         catch (error) {
@@ -182,7 +182,7 @@ router.post('/', [
         }
     }
     catch (error) {
-        console.error('Create expense error:', error);
+        console.error('Create purchase error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -230,18 +230,18 @@ router.put('/:id', [
             });
         }
         const userId = req.user.userId;
-        const expenseId = parseInt(req.params.id);
-        if (isNaN(expenseId)) {
+        const purchaseId = parseInt(req.params.id);
+        if (isNaN(purchaseId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid expense ID'
+                message: 'Invalid purchase ID'
             });
         }
-        const [existingRecords] = await database_1.pool.execute('SELECT id FROM expenses WHERE id = ? AND user_id = ?', [expenseId, userId]);
+        const [existingRecords] = await database_1.pool.execute('SELECT id FROM purchases WHERE id = ? AND user_id = ?', [purchaseId, userId]);
         if (existingRecords.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'Expense record not found'
+                message: 'Purchase record not found'
             });
         }
         const { amount, description, category, payment_method, date, receipt_path } = req.body;
@@ -277,17 +277,17 @@ router.put('/:id', [
                 message: 'No valid fields to update'
             });
         }
-        values.push(expenseId);
-        await database_1.pool.execute(`UPDATE expenses SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, values);
-        const [updatedRecords] = await database_1.pool.execute('SELECT * FROM expenses WHERE id = ?', [expenseId]);
+        values.push(purchaseId);
+        await database_1.pool.execute(`UPDATE purchases SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, values);
+        const [updatedRecords] = await database_1.pool.execute('SELECT * FROM purchases WHERE id = ?', [purchaseId]);
         res.json({
             success: true,
-            message: 'Expense record updated successfully',
-            data: { expense: updatedRecords[0] }
+            message: 'Purchase record updated successfully',
+            data: { purchase: updatedRecords[0] }
         });
     }
     catch (error) {
-        console.error('Update expense error:', error);
+        console.error('Update purchase error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -297,29 +297,29 @@ router.put('/:id', [
 router.delete('/:id', async (req, res) => {
     try {
         const userId = req.user.userId;
-        const expenseId = parseInt(req.params.id);
-        if (isNaN(expenseId)) {
+        const purchaseId = parseInt(req.params.id);
+        if (isNaN(purchaseId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid expense ID'
+                message: 'Invalid purchase ID'
             });
         }
-        const [existingRecords] = await database_1.pool.execute('SELECT id FROM expenses WHERE id = ? AND user_id = ?', [expenseId, userId]);
+        const [existingRecords] = await database_1.pool.execute('SELECT id FROM purchases WHERE id = ? AND user_id = ?', [purchaseId, userId]);
         if (existingRecords.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'Expense record not found'
+                message: 'Purchase record not found'
             });
         }
         const connection = await database_1.pool.getConnection();
         await connection.beginTransaction();
         try {
-            await connection.execute('DELETE FROM transactions WHERE reference_id = ? AND reference_table = ? AND user_id = ?', [expenseId, 'expenses', userId]);
-            await connection.execute('DELETE FROM expenses WHERE id = ? AND user_id = ?', [expenseId, userId]);
+            await connection.execute('DELETE FROM transactions WHERE reference_id = ? AND reference_table = ? AND user_id = ?', [purchaseId, 'purchases', userId]);
+            await connection.execute('DELETE FROM purchases WHERE id = ? AND user_id = ?', [purchaseId, userId]);
             await connection.commit();
             res.json({
                 success: true,
-                message: 'Expense record deleted successfully'
+                message: 'Purchase record deleted successfully'
             });
         }
         catch (error) {
@@ -331,7 +331,7 @@ router.delete('/:id', async (req, res) => {
         }
     }
     catch (error) {
-        console.error('Delete expense error:', error);
+        console.error('Delete purchase error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -343,18 +343,18 @@ router.get('/stats/summary', async (req, res) => {
         const userId = req.user.userId;
         const [stats] = await database_1.pool.execute(`SELECT 
         COUNT(*) as total_records,
-        SUM(amount) as total_expenses,
-        AVG(amount) as average_expense,
+        SUM(amount) as total_purchases,
+        AVG(amount) as average_purchase,
         MIN(date) as earliest_date,
         MAX(date) as latest_date
-       FROM expenses 
+       FROM purchases 
        WHERE user_id = ?`, [userId]);
         const [monthlyStats] = await database_1.pool.execute(`SELECT 
         MONTH(date) as month,
         YEAR(date) as year,
-        SUM(amount) as monthly_expenses,
+        SUM(amount) as monthly_purchases,
         COUNT(*) as monthly_count
-       FROM expenses 
+       FROM purchases 
        WHERE user_id = ? AND YEAR(date) = YEAR(CURDATE())
        GROUP BY YEAR(date), MONTH(date)
        ORDER BY month`, [userId]);
@@ -363,7 +363,7 @@ router.get('/stats/summary', async (req, res) => {
         COUNT(*) as count,
         SUM(amount) as total_amount,
         AVG(amount) as average_amount
-       FROM expenses 
+       FROM purchases 
        WHERE user_id = ? 
        GROUP BY category
        ORDER BY total_amount DESC`, [userId]);
@@ -371,7 +371,7 @@ router.get('/stats/summary', async (req, res) => {
         payment_method,
         COUNT(*) as count,
         SUM(amount) as total_amount
-       FROM expenses 
+       FROM purchases 
        WHERE user_id = ? 
        GROUP BY payment_method
        ORDER BY total_amount DESC`, [userId]);
@@ -386,7 +386,7 @@ router.get('/stats/summary', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Expense stats error:', error);
+        console.error('Purchase stats error:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'

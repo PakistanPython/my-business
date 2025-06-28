@@ -10,7 +10,11 @@ import {
   DollarSign,
   Users,
   Activity,
-  BarChart3
+  BarChart3,
+  ShoppingCart,
+  ShoppingBag,
+  Package,
+  Target
 } from 'lucide-react';
 import { dashboardApi } from '../lib/api';
 import { DashboardData, AnalyticsData, DashboardSummary } from '../lib/types';
@@ -62,9 +66,9 @@ export const Dashboard: React.FC = () => {
   }
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-PK', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'PKR',
     }).format(amount);
   };
 
@@ -122,6 +126,38 @@ export const Dashboard: React.FC = () => {
       href: '/charity'
     },
     {
+      title: 'Total Purchases',
+      value: formatCurrency(summary?.total_purchases || 0),
+      icon: Package,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-100',
+      change: `${summary?.total_purchases_count || 0} items`,
+      changeType: 'neutral' as const,
+      href: '/purchases'
+    },
+    {
+      title: 'Sales Revenue',
+      value: formatCurrency(summary?.total_sales_revenue || 0),
+      icon: ShoppingBag,
+      color: 'text-green-600',
+      bgColor: 'bg-green-100',
+      change: `${summary?.total_sales_count || 0} sales`,
+      changeType: 'positive' as const,
+      href: '/sales'
+    },
+    {
+      title: 'Sales Profit',
+      value: formatCurrency(summary?.total_sales_profit || 0),
+      icon: Target,
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-100',
+      change: summary?.total_sales_revenue > 0 ? 
+        `${((summary?.total_sales_profit / summary?.total_sales_revenue) * 100).toFixed(1)}% margin` : 
+        '0% margin',
+      changeType: 'positive' as const,
+      href: '/sales'
+    },
+    {
       title: 'Net Worth',
       value: formatCurrency(summary?.net_worth || 0),
       icon: DollarSign,
@@ -148,11 +184,17 @@ export const Dashboard: React.FC = () => {
           <Button variant="outline" asChild>
             <Link to="/expenses">Add Expense</Link>
           </Button>
+          <Button variant="outline" asChild>
+            <Link to="/purchases">Add Purchase</Link>
+          </Button>
+          <Button asChild className="bg-green-600 hover:bg-green-700">
+            <Link to="/sales">Add Sale</Link>
+          </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {statsCards.map((stat, index) => {
           const Icon = stat.icon;
           return (

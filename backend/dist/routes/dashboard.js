@@ -15,11 +15,16 @@ router.get('/summary', async (req, res) => {
         const [financialSummary] = await database_1.pool.execute(`SELECT 
         (SELECT COALESCE(SUM(amount), 0) FROM income WHERE user_id = ?) as total_income,
         (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE user_id = ?) as total_expenses,
+        (SELECT COALESCE(SUM(amount), 0) FROM purchases WHERE user_id = ?) as total_purchases,
+        0 as total_sales_revenue,
+        0 as total_sales_profit,
+        (SELECT COUNT(*) FROM purchases WHERE user_id = ?) as total_purchases_count,
+        (SELECT COUNT(*) FROM sales WHERE user_id = ?) as total_sales_count,
         (SELECT COALESCE(SUM(balance), 0) FROM accounts WHERE user_id = ?) as total_accounts_balance,
         (SELECT COALESCE(SUM(current_balance), 0) FROM loans WHERE user_id = ? AND status = 'active') as total_active_loans,
         (SELECT COALESCE(SUM(amount_required), 0) FROM charity WHERE user_id = ?) as total_charity_required,
         (SELECT COALESCE(SUM(amount_paid), 0) FROM charity WHERE user_id = ?) as total_charity_paid,
-        (SELECT COALESCE(SUM(amount_remaining), 0) FROM charity WHERE user_id = ?) as total_charity_remaining`, [userId, userId, userId, userId, userId, userId, userId]);
+        (SELECT COALESCE(SUM(amount_remaining), 0) FROM charity WHERE user_id = ?) as total_charity_remaining`, [userId, userId, userId, userId, userId, userId, userId, userId, userId, userId, userId, userId]);
         const summary = financialSummary[0];
         summary.net_worth = parseFloat(summary.total_income) - parseFloat(summary.total_expenses);
         summary.available_cash = parseFloat(summary.total_accounts_balance) - parseFloat(summary.total_active_loans);
@@ -138,7 +143,8 @@ router.get('/summary', async (req, res) => {
 });
 router.get('/analytics', [
     (0, express_validator_1.query)('period').optional().isIn(['week', 'month', 'quarter', 'year']).withMessage('Invalid period'),
-    (0, express_validator_1.query)('year').optional().isInt({ min: 2000, max: 2100 }).withMessage('Invalid year')
+    (0, express_validator_1.query)('year').optional().isInt({ min: 2000, max: 2100 }).withMessage('Invalid year'),
+    (0, express_validator_1.query)('time_range').optional().isIn(['3months', '6months', '12months', '24months']).withMessage('Invalid time range')
 ], async (req, res) => {
     try {
         const errors = (0, express_validator_1.validationResult)(req);
@@ -152,29 +158,52 @@ router.get('/analytics', [
         const userId = req.user.userId;
         const period = req.query.period || 'month';
         const year = parseInt(req.query.year) || new Date().getFullYear();
+        const timeRange = req.query.time_range;
         let dateFilter = '';
         let groupBy = '';
         let dateFormat = '';
-        switch (period) {
-            case 'week':
-                dateFilter = `AND YEAR(date) = ${year} AND WEEK(date) >= WEEK(CURDATE()) - 12`;
-                groupBy = 'YEAR(date), WEEK(date)';
-                dateFormat = 'CONCAT(YEAR(date), "-W", LPAD(WEEK(date), 2, "0"))';
-                break;
-            case 'quarter':
-                dateFilter = `AND YEAR(date) = ${year}`;
-                groupBy = 'YEAR(date), QUARTER(date)';
-                dateFormat = 'CONCAT(YEAR(date), "-Q", QUARTER(date))';
-                break;
-            case 'year':
-                dateFilter = `AND YEAR(date) >= ${year - 4}`;
-                groupBy = 'YEAR(date)';
-                dateFormat = 'YEAR(date)';
-                break;
-            default:
-                dateFilter = `AND YEAR(date) = ${year}`;
-                groupBy = 'YEAR(date), MONTH(date)';
-                dateFormat = 'DATE_FORMAT(date, "%Y-%m")';
+        if (timeRange) {
+            let intervalMonths = 0;
+            switch (timeRange) {
+                case '3months':
+                    intervalMonths = 3;
+                    break;
+                case '6months':
+                    intervalMonths = 6;
+                    break;
+                case '12months':
+                    intervalMonths = 12;
+                    break;
+                case '24months':
+                    intervalMonths = 24;
+                    break;
+            }
+            dateFilter = `AND date >= DATE_SUB(CURDATE(), INTERVAL ${intervalMonths} MONTH)`;
+            groupBy = 'YEAR(date), MONTH(date)';
+            dateFormat = 'DATE_FORMAT(date, "%Y-%m")';
+        }
+        else {
+            switch (period) {
+                case 'week':
+                    dateFilter = `AND YEAR(date) = ${year} AND WEEK(date) >= WEEK(CURDATE()) - 12`;
+                    groupBy = 'YEAR(date), WEEK(date)';
+                    dateFormat = 'CONCAT(YEAR(date), "-W", LPAD(WEEK(date), 2, "0"))';
+                    break;
+                case 'quarter':
+                    dateFilter = `AND YEAR(date) = ${year}`;
+                    groupBy = 'YEAR(date), QUARTER(date)';
+                    dateFormat = 'CONCAT(YEAR(date), "-Q", QUARTER(date))';
+                    break;
+                case 'year':
+                    dateFilter = `AND YEAR(date) >= ${year - 4}`;
+                    groupBy = 'YEAR(date)';
+                    dateFormat = 'YEAR(date)';
+                    break;
+                default:
+                    dateFilter = `AND date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)`;
+                    groupBy = 'YEAR(date), MONTH(date)';
+                    dateFormat = 'DATE_FORMAT(date, "%Y-%m")';
+            }
         }
         const [incomeAnalytics] = await database_1.pool.execute(`SELECT 
         ${dateFormat} as period,
@@ -197,29 +226,38 @@ router.get('/analytics', [
        WHERE user_id = ? ${dateFilter}
        GROUP BY ${groupBy}, category
        ORDER BY period, total_amount DESC`, [userId]);
-        const [profitAnalysis] = await database_1.pool.execute(`SELECT 
-        ${dateFormat} as period,
-        COALESCE(income.total_income, 0) as income,
-        COALESCE(expenses.total_expenses, 0) as expenses,
-        (COALESCE(income.total_income, 0) - COALESCE(expenses.total_expenses, 0)) as profit,
-        CASE 
-          WHEN COALESCE(income.total_income, 0) > 0 
-          THEN ROUND(((COALESCE(income.total_income, 0) - COALESCE(expenses.total_expenses, 0)) / income.total_income) * 100, 2)
-          ELSE 0 
+        const [profitAnalysis] = await database_1.pool.execute(`SELECT
+        all_periods.period,
+        COALESCE(income_data.total_income, 0) as income,
+        COALESCE(expenses_data.total_expenses, 0) as expenses,
+        (COALESCE(income_data.total_income, 0) - COALESCE(expenses_data.total_expenses, 0)) as profit,
+        CASE
+            WHEN COALESCE(income_data.total_income, 0) > 0
+            THEN ROUND(((COALESCE(income_data.total_income, 0) - COALESCE(expenses_data.total_expenses, 0)) / income_data.total_income) * 100, 2)
+            ELSE 0
         END as profit_margin
        FROM (
-         SELECT ${dateFormat} as period, SUM(amount) as total_income
-         FROM income 
-         WHERE user_id = ? ${dateFilter}
-         GROUP BY ${groupBy}
-       ) income
-       FULL OUTER JOIN (
-         SELECT ${dateFormat} as period, SUM(amount) as total_expenses
-         FROM expenses 
-         WHERE user_id = ? ${dateFilter}
-         GROUP BY ${groupBy}
-       ) expenses ON income.period = expenses.period
-       ORDER BY period`, [userId, userId]);
+           SELECT DISTINCT ${dateFormat} as period
+           FROM income
+           WHERE user_id = ? ${dateFilter}
+           UNION
+           SELECT DISTINCT ${dateFormat} as period
+           FROM expenses
+           WHERE user_id = ? ${dateFilter}
+       ) as all_periods
+       LEFT JOIN (
+           SELECT ${dateFormat} as period, SUM(amount) as total_income
+           FROM income
+           WHERE user_id = ? ${dateFilter}
+           GROUP BY ${groupBy}
+       ) as income_data ON all_periods.period = income_data.period
+       LEFT JOIN (
+           SELECT ${dateFormat} as period, SUM(amount) as total_expenses
+           FROM expenses
+           WHERE user_id = ? ${dateFilter}
+           GROUP BY ${groupBy}
+       ) as expenses_data ON all_periods.period = expenses_data.period
+       ORDER BY all_periods.period`, [userId, userId, userId, userId]);
         res.json({
             success: true,
             data: {

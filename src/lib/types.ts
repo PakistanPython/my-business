@@ -4,6 +4,7 @@ export interface User {
   username: string;
   email: string;
   full_name: string;
+  business_name?: string;
   created_at: string;
 }
 
@@ -49,6 +50,30 @@ export interface Purchase {
   receipt_path?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface Sale {
+  id: number;
+  purchase_id?: number;
+  amount: number;
+  selling_price: number;
+  profit: number;
+  profit_percentage: number;
+  description?: string;
+  customer_name?: string;
+  customer_contact?: string;
+  payment_method: string;
+  date: string;
+  status: 'pending' | 'completed' | 'cancelled';
+  notes?: string;
+  category: string; // Added category
+  receipt_path?: string; // Added receipt_path
+  created_at: string;
+  updated_at: string;
+  // Joined fields from purchase (these were commented out, re-adding for completeness if needed by frontend)
+  purchase_description?: string;
+  purchase_category?: string;
+  purchase_date?: string;
 }
 
 export interface Charity {
@@ -97,7 +122,7 @@ export interface Loan {
 export interface Category {
   id: number;
   name: string;
-  type: 'income' | 'expense' | 'purchase';
+  type: 'income' | 'expense' | 'purchase' | 'sale';
   color: string;
   icon: string;
   created_at: string;
@@ -107,7 +132,7 @@ export interface Category {
 
 export interface Transaction {
   id: number;
-  transaction_type: 'income' | 'expense' | 'purchase' | 'transfer' | 'loan_payment' | 'charity';
+  transaction_type: 'income' | 'expense' | 'purchase' | 'sale' | 'transfer' | 'loan_payment' | 'charity';
   reference_id?: number;
   reference_table?: string;
   amount: number;
@@ -121,6 +146,11 @@ export interface Transaction {
 export interface DashboardSummary {
   total_income: number;
   total_expenses: number;
+  total_purchases: number;
+  total_sales_revenue: number;
+  total_sales_profit: number;
+  total_purchases_count: number;
+  total_sales_count: number;
   total_accounts_balance: number;
   total_active_loans: number;
   total_charity_required: number;
@@ -231,6 +261,7 @@ export interface RegisterForm {
   email: string;
   password: string;
   full_name: string;
+  business_name?: string;
 }
 
 export interface IncomeForm {
@@ -255,6 +286,21 @@ export interface PurchaseForm {
   category: string;
   payment_method: string;
   date: string;
+}
+
+export interface SaleForm {
+  purchase_id?: number;
+  amount: number;
+  selling_price: number;
+  description?: string;
+  customer_name?: string;
+  customer_contact?: string;
+  payment_method: string;
+  date: string;
+  status?: 'pending' | 'completed' | 'cancelled';
+  notes?: string;
+  category: string; // Added category
+  receipt_path?: string; // Added receipt_path
 }
 
 export interface CharityPaymentForm {
@@ -286,7 +332,7 @@ export interface LoanForm {
 
 export interface CategoryForm {
   name: string;
-  type: 'income' | 'expense' | 'purchase';
+  type: 'income' | 'expense' | 'purchase' | 'sale';
   color?: string;
   icon?: string;
 }
