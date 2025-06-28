@@ -63,7 +63,12 @@ export const ExpensesPage: React.FC = () => {
         categoryApi.getAll({ type: 'expense' })
       ]);
       
-      setExpenses(expensesResponse.data.data.expenses || []);
+      const fetchedExpenses = expensesResponse.data.data.expenses || [];
+      const sanitizedExpenses = fetchedExpenses.map((exp: Expense) => ({
+        ...exp,
+        amount: Number(exp.amount) || 0,
+      }));
+      setExpenses(sanitizedExpenses);
       setCategories(categoriesResponse.data.data.categories || []);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -82,18 +87,22 @@ export const ExpensesPage: React.FC = () => {
     }
 
     try {
+      let savedExpense: Expense;
       if (editingExpense) {
-        await expenseApi.update(editingExpense.id, formData);
+        const response = await expenseApi.update(editingExpense.id, formData);
+        savedExpense = response.data.data.expense;
+        setExpenses(prev => prev.map(exp => exp.id === savedExpense.id ? savedExpense : exp));
         toast.success('Expense updated successfully');
       } else {
-        await expenseApi.create(formData);
+        const response = await expenseApi.create(formData);
+        savedExpense = response.data.data.expense;
+        setExpenses(prev => [savedExpense, ...prev]);
         toast.success('Expense added successfully');
       }
       
       setIsDialogOpen(false);
       setEditingExpense(null);
       resetForm();
-      loadData();
     } catch (error: any) {
       console.error('Error saving expense:', error);
       toast.error(error.response?.data?.message || 'Failed to save expense');
@@ -144,7 +153,7 @@ export const ExpensesPage: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const totalExpenses = filteredExpenses.reduce((sum, item) => sum + item.amount, 0);
+  const totalExpenses = filteredExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
