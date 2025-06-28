@@ -96,6 +96,21 @@ const createTables = async () => {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )`,
 
+    // Purchases table
+    `CREATE TABLE IF NOT EXISTS purchases (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      user_id INT NOT NULL,
+      amount DECIMAL(15,2) NOT NULL,
+      description TEXT,
+      category VARCHAR(50) NOT NULL,
+      payment_method VARCHAR(50) DEFAULT 'Cash',
+      date DATE NOT NULL,
+      receipt_path VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`,
+
     // Charity table
     `CREATE TABLE IF NOT EXISTS charity (
       id INT PRIMARY KEY AUTO_INCREMENT,
@@ -150,7 +165,7 @@ const createTables = async () => {
     `CREATE TABLE IF NOT EXISTS transactions (
       id INT PRIMARY KEY AUTO_INCREMENT,
       user_id INT NOT NULL,
-      transaction_type ENUM('income', 'expense', 'transfer', 'loan_payment', 'charity') NOT NULL,
+      transaction_type ENUM('income', 'expense', 'purchase', 'transfer', 'loan_payment', 'charity') NOT NULL,
       reference_id INT,
       reference_table VARCHAR(50),
       amount DECIMAL(15,2) NOT NULL,
@@ -167,7 +182,7 @@ const createTables = async () => {
       id INT PRIMARY KEY AUTO_INCREMENT,
       user_id INT NOT NULL,
       name VARCHAR(50) NOT NULL,
-      type ENUM('income', 'expense') NOT NULL,
+      type ENUM('income', 'expense', 'purchase') NOT NULL,
       color VARCHAR(7) DEFAULT '#3B82F6',
       icon VARCHAR(50) DEFAULT 'circle',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -184,6 +199,7 @@ const createTables = async () => {
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_income_user_date ON income(user_id, date)',
     'CREATE INDEX IF NOT EXISTS idx_expenses_user_date ON expenses(user_id, date)',
+    'CREATE INDEX IF NOT EXISTS idx_purchases_user_date ON purchases(user_id, date)',
     'CREATE INDEX IF NOT EXISTS idx_charity_user_status ON charity(user_id, status)',
     'CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, date)',
     'CREATE INDEX IF NOT EXISTS idx_accounts_user_type ON accounts(user_id, account_type)'

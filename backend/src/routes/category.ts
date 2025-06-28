@@ -10,7 +10,7 @@ router.use(authenticateToken);
 
 // Get all categories
 router.get('/', [
-  query('type').optional().isIn(['income', 'expense']).withMessage('Type must be income or expense')
+  query('type').optional().isIn(['income', 'expense', 'purchase']).withMessage('Type must be income, expense, or purchase')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -33,6 +33,9 @@ router.get('/', [
       whereParams.push(type);
     }
 
+    console.log('Category API - whereClause:', whereClause);
+    console.log('Category API - whereParams:', whereParams);
+
     const [categories] = await pool.execute(
       `SELECT id, name, type, color, icon, created_at 
        FROM categories 
@@ -40,6 +43,8 @@ router.get('/', [
        ORDER BY type, name`,
       whereParams
     ) as any[];
+
+    console.log('Category API - Fetched categories:', categories);
 
     // Group categories by type
     const groupedCategories = categories.reduce((acc: any, category: any) => {
@@ -112,8 +117,8 @@ router.post('/', [
     .isLength({ max: 50 })
     .withMessage('Category name is required and cannot exceed 50 characters'),
   body('type')
-    .isIn(['income', 'expense'])
-    .withMessage('Type must be income or expense'),
+    .isIn(['income', 'expense', 'purchase'])
+    .withMessage('Type must be income, expense, or purchase'),
   body('color')
     .optional()
     .matches(/^#[0-9A-F]{6}$/i)
@@ -337,13 +342,19 @@ router.delete('/:id', async (req, res) => {
       [userId, category.name]
     ) as any[];
 
-    if (incomeUsage[0].count > 0 || expenseUsage[0].count > 0) {
+    const [purchaseUsage] = await pool.execute(
+      'SELECT COUNT(*) as count FROM purchases WHERE user_id = ? AND category = ?',
+      [userId, category.name]
+    ) as any[];
+
+    if (incomeUsage[0].count > 0 || expenseUsage[0].count > 0 || purchaseUsage[0].count > 0) {
       return res.status(400).json({
         success: false,
         message: 'Cannot delete category that is being used in transactions',
         data: {
           income_count: incomeUsage[0].count,
-          expense_count: expenseUsage[0].count
+          expense_count: expenseUsage[0].count,
+          purchase_count: purchaseUsage[0].count
         }
       });
     }
@@ -498,10 +509,21 @@ router.get('/usage/summary', async (req, res) => {
          FROM expenses 
          WHERE user_id = ?
          GROUP BY category
+
+         UNION ALL
+
+         SELECT
+           category,
+           'purchase' as type,
+           COUNT(*) as transaction_count,
+           SUM(amount) as total_amount
+         FROM purchases
+         WHERE user_id = ?
+         GROUP BY category
        ) usage ON c.name = usage.category AND c.type = usage.type
        WHERE c.user_id = ?
        ORDER BY c.type, usage.total_amount DESC, c.name`,
-      [userId, userId, userId]
+      [userId, userId, userId, userId]
     ) as any[];
 
     res.json({

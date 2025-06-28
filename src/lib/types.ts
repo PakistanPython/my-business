@@ -39,6 +39,18 @@ export interface Expense {
   updated_at: string;
 }
 
+export interface Purchase {
+  id: number;
+  amount: number;
+  description?: string;
+  category: string;
+  payment_method: string;
+  date: string;
+  receipt_path?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Charity {
   id: number;
   income_id?: number;
@@ -85,7 +97,7 @@ export interface Loan {
 export interface Category {
   id: number;
   name: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'purchase';
   color: string;
   icon: string;
   created_at: string;
@@ -95,7 +107,7 @@ export interface Category {
 
 export interface Transaction {
   id: number;
-  transaction_type: 'income' | 'expense' | 'transfer' | 'loan_payment' | 'charity';
+  transaction_type: 'income' | 'expense' | 'purchase' | 'transfer' | 'loan_payment' | 'charity';
   reference_id?: number;
   reference_table?: string;
   amount: number;
@@ -237,6 +249,14 @@ export interface ExpenseForm {
   date: string;
 }
 
+export interface PurchaseForm {
+  amount: number;
+  description?: string;
+  category: string;
+  payment_method: string;
+  date: string;
+}
+
 export interface CharityPaymentForm {
   charity_id: number;
   payment_amount: number;
@@ -266,7 +286,7 @@ export interface LoanForm {
 
 export interface CategoryForm {
   name: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'purchase';
   color?: string;
   icon?: string;
 }

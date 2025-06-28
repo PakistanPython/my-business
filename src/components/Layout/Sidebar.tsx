@@ -12,7 +12,8 @@ import {
   LogOut,
   User,
   BarChart3,
-  Building2
+  Building2,
+  ShoppingCart
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Income', href: '/income', icon: TrendingUp },
   { name: 'Expenses', href: '/expenses', icon: TrendingDown },
+  { name: 'Purchases', href: '/purchases', icon: ShoppingCart },
   { name: 'Charity', href: '/charity', icon: Heart },
   { name: 'Accounts', href: '/accounts', icon: Wallet },
   { name: 'Loans', href: '/loans', icon: CreditCard },

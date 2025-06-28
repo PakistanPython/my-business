@@ -169,17 +169,28 @@ export const CategoriesPage: React.FC = () => {
   };
 
   const getTypeBadge = (type: string) => {
-    return type === 'income' ? (
-      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-        <TrendingUp className="w-3 h-3 mr-1" />
-        Income
-      </Badge>
-    ) : (
-      <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-        <TrendingDown className="w-3 h-3 mr-1" />
-        Expense
-      </Badge>
-    );
+    if (type === 'income') {
+      return (
+        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+          <TrendingUp className="w-3 h-3 mr-1" />
+          Income
+        </Badge>
+      );
+    } else if (type === 'expense') {
+      return (
+        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
+          <TrendingDown className="w-3 h-3 mr-1" />
+          Expense
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
+          <ShoppingBag className="w-3 h-3 mr-1" />
+          Purchase
+        </Badge>
+      );
+    }
   };
 
   const filteredCategories = categories.filter(category => {
@@ -368,6 +379,7 @@ export const CategoriesPage: React.FC = () => {
               <option value="all">All Types</option>
               <option value="income">Income</option>
               <option value="expense">Expense</option>
+              <option value="purchase">Purchase</option>
             </select>
           </div>
 
@@ -473,6 +485,7 @@ export const CategoriesPage: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="income">Income</SelectItem>
                     <SelectItem value="expense">Expense</SelectItem>
+                    <SelectItem value="purchase">Purchase</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

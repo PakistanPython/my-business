@@ -67,6 +67,15 @@ export const expenseApi = {
   getStats: () => api.get('/expenses/stats/summary'),
 };
 
+export const purchaseApi = {
+  getAll: (params?: any) => api.get('/purchases', { params }),
+  getById: (id: number) => api.get(`/purchases/${id}`),
+  create: (data: any) => api.post('/purchases', data),
+  update: (id: number, data: any) => api.put(`/purchases/${id}`, data),
+  delete: (id: number) => api.delete(`/purchases/${id}`),
+  getStats: () => api.get('/purchases/stats/summary'),
+};
+
 export const charityApi = {
   getAll: (params?: any) => api.get('/charity', { params }),
   getById: (id: number) => api.get(`/charity/${id}`),
